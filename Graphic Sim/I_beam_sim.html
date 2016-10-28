@@ -1,0 +1,367 @@
+
+<!doctype= html>
+
+<html>
+<head>
+
+
+  <title>Ibeam</title>
+
+<body onload="start_sim()">
+
+		<div style="float: left; padding-right: 20px;">
+	<p>B<sub>ft</sub> = <span id="slider_Bt">50</span> mm </p><input id="Bt" type="range" step="1" value="50" min="40" max="100" onInput="Btchange(this.value); start_sim()">
+	<p>H<sub>w</sub> = <span id="slider_Hw">50</span> mm </p><input id="Hw" type="range" step="1" value="50" min="40" max="80" onInput="Hwchange(this.value); start_sim()">
+	<p>B<sub>fb</sub> = <span id="slider_Bb">50</span> mm </p><input id="Bb" type="range" step="1" value="50" min="40" max="100" onInput="Bbchange(this.value); start_sim()"><br><br>
+
+	</div>
+	<div style="float: left; padding-right: 10px;">
+		<p>t<sub>ft</sub> = <span id="slider_tt">6</span> mm </p><input id="tt" type="range" step="1" value="6" min="3" max="10" onInput="ttchange(this.value); start_sim()">
+		<p>t<sub>w</sub> = <span id="slider_tw">6</span> mm </p><input id="tw" type="range" step="1" value="6" min="3" max="10" onInput="twchange(this.value); start_sim()">
+		<p>t<sub>fb</sub> = <span id="slider_tb">6</span> mm </p><input id="tb" type="range" step="1" value="6" min="3" max="10" onInput="tbchange(this.value); start_sim()">
+	</div>
+	<br><br>
+
+<!-- <div style="float: left; padding-right: 20px;">
+	<p>F<sub>1</sub> = <span id="Force1">3</span> kN </p><input id="F1" type="range" step="0.1" value="3" min="-5" max="5" onInput="Force1Change(this.value); start_sim()">
+	<p>F<sub>2</sub> = <span id="Force2">4</span> kN </p><input id="F2" type="range" step="0.1" value="4" min="-5" max="5" onInput="Force2Change(this.value); start_sim()">
+	<p>F<sub>3</sub> = <span id="Force3">5</span> kN </p><input id="F3" type="range" step="0.1" value="5" min="-5" max="5" onInput="Force3Change(this.value); start_sim()"><br><br>
+
+</div> -->
+		<canvas id="myCanvas" width="430" height="350" style="border:1px solid #d3d3d3; float: left;"></canvas>
+  <script>
+
+function Btchange(val) {
+	document.getElementById('slider_Bt').innerHTML = val;
+}
+
+function Hwchange(val) {
+	document.getElementById('slider_Hw').innerHTML = val;
+}
+
+function Bbchange(val) {
+	document.getElementById('slider_Bb').innerHTML = val;
+}
+
+function ttchange(val) {
+	document.getElementById('slider_tt').innerHTML = val;
+}
+
+function twchange(val) {
+	document.getElementById('slider_tw').innerHTML = val;
+}
+
+function tbchange(val) {
+	document.getElementById('slider_tb').innerHTML = val;
+}
+
+
+
+
+// var ctx = getCanvas();
+
+// var myinterval;
+// var dt = 0.005; // in seconds
+//scale is 50 pixles per meter
+var scale = 2;
+var force_scale = 0.15
+var canvasheight = document.getElementById('myCanvas').height / scale //canvasheight in meters
+var canvaswidth = document.getElementById('myCanvas').width / scale // canvaswidth in meters
+
+var x_0; //position axis at top of I beam
+var y_0;
+var y_com; //position of centroid
+
+var A1;
+var A2;
+var A3;
+
+var y1;
+var y2;
+var y3;
+
+var Ixo1;
+var Ixo2;
+var Ixo3;
+var Ix;
+
+var Iyo1;
+var Iyo2;
+var Iyo3;
+var Iy;
+
+function start_sim(){
+	//clearInterval(myinterval);
+//inputs and geometry
+
+Bt = Number(document.getElementById("Bt").value);
+Hw = Number(document.getElementById("Hw").value);
+Bb = Number(document.getElementById("Bb").value);
+tt = Number(document.getElementById("tt").value);
+tw = Number(document.getElementById("tw").value);
+tb = Number(document.getElementById("tb").value);
+
+x_0 = 0.5*canvaswidth; //x position of center of mass
+y_0 = 0.05*canvasheight; //y position of center of mass
+
+A1 = Bt * tt;
+A2 = Hw * tw;
+A3 = Bb * tb;
+
+y1 = y_0 + 0.5 * tt;
+y2 = y_0 + tt + 0.5 * Hw;
+y3 = y_0 + tt + Hw + 0.5 * tb;
+
+y_com = (A1*y1 + A2*y2 + A3*y3)/(A1 + A2 + A3); 
+
+Ixo1 = (1/12)*Bt*tt*tt*tt;
+Ixo2 = (1/12)*tw*Hw*Hw*Hw;
+Ixo3 = (1/12)*Bb*tb*tb*tb;
+
+Ix = Ixo1 + A1*(y1-y_com)*(y1-y_com) + Ixo2 + A2*(y2-y_com)*(y2-y_com) + Ixo3 + A3*(y3-y_com)*(y3-y_com);
+
+Iyo1 = (1/12)*tt*Bt*Bt*Bt;
+Iyo2 = (1/12)*Hw*tw*tw*tw;
+Iyo3 = (1/12)*tb*Bb*Bb*Bb;
+
+Iy = Iyo1 + Iyo2 + Iyo3;
+
+
+simulate_calcs();
+// myinterval = setInterval(function(){simulate_calcs()}, dt * 1000)
+// }
+
+function simulate_calcs() {
+var ctx=getCanvas();
+
+ctx.clearRect(0,0,canvaswidth*scale,canvasheight*scale);
+
+//section 1
+drawRectangle(x_0-0.5*Bt, y_0, Bt, tt, "rgba(169,169,169,0.6)");
+
+//section 2
+drawRectangle(x_0-0.5*tw, y_0 + tt, tw, Hw, "rgba(169,169,169,0.6)");
+
+//section 3
+drawRectangle(x_0-0.5*Bb, y_0+tt+Hw, Bb, tb, "rgba(169,169,169,0.6)");
+
+
+drawCenterofmass(x_0, y_com, 2);
+
+//I_y
+drawRectangle(canvaswidth/6, canvasheight*0.75, Ix/30000, 10, "rgba(135,206,250,0.6)");
+
+//Ix
+drawRectangle(canvaswidth/6, canvasheight*0.85, Iy/30000, 10, "rgba(245,201,63,0.6)");
+
+//bar chart line
+drawLine(canvaswidth/6,canvasheight*0.75, canvaswidth/6, canvasheight*0.85 + 10);
+
+
+
+ctx.font="14px Ariel";
+ctx.textAlign = "right";
+ctx.fillStyle = 'black';
+ctx.fillText('Ix',63 ,275);
+ctx.fillText('Iy',63 , 	313);
+//ctx.fillText()
+	// //rotation of bar
+	// alpha = m * 9.81 * b * Math.cos(theta) / I_o;
+	// w = w + alpha * dt;
+	// theta = theta + w * dt;
+
+	// x_0 = 0.5 * canvaswidth + b * Math.cos(theta);
+	// y_0 =  0.5 * canvasheight + b * Math.sin(theta);
+
+	// //Reactions
+	// a_x = - 3 * m * 9.81 * b * b * Math.sin(theta) * Math.cos(theta) / I_o;
+	// a_y = m * 9.81 * b * b * (-1 + 3 * Math.sin(theta) * Math.sin(theta)) / I_o;
+
+	// O_x = m * a_x;
+	// O_y = m * a_y + m * 9.81;
+
+}
+
+
+
+
+function getCanvas() {
+	var c = document.getElementById("myCanvas");
+	return c.getContext("2d");
+} 
+
+function drawRectangle( x, y, width, height, color) {
+	var ctx = getCanvas();
+	ctx.fillStyle = color;
+	ctx.beginPath();
+	ctx.rect(x * scale, y * scale, width * scale, height * scale);
+	ctx.closePath();
+
+	ctx.fill();
+	//ctx.stroke();
+
+}
+
+function drawRectangleSlant(x1, y1, L, t, theta) {
+	var ctx = getCanvas();
+
+	ctx.beginPath();
+	var gr = ctx.createLinearGradient(scale * x1, scale * y1, scale * (x1 + L*Math.cos(theta)), scale * (y1 + L*Math.sin(theta)));
+	gr.addColorStop(0,'rgb(204,204,204)');
+	gr.addColorStop(0.5, 'rgb(191,191,191');
+	gr.addColorStop(1,'rgb(200,200,200)');
+	ctx.fillStyle = gr;
+
+	ctx.moveTo(scale * x1, scale * y1);
+	ctx.lineTo(scale * (x1 + L * Math.cos(theta)), scale * (y1 + L * Math.sin(theta)));
+	ctx.lineTo(scale * (x1 + L * Math.cos(theta) - t * Math.sin(theta)), scale * (y1 + L * Math.sin(theta) + t * Math.cos(theta)));
+	ctx.lineTo(scale * (x1 - t * Math.sin(theta)), scale * (y1 + t * Math.cos(theta)));
+	ctx.lineTo(scale * x1, scale * y1);
+	ctx.stroke();
+
+	ctx.fill();
+	ctx.closePath();
+}
+
+function drawLine2(x1,y1,x2,y2,color) {
+	var ctx = getCanvas();
+
+	ctx.beginPath();
+	ctx.moveTo(x1 * scale,y1 * scale);
+	ctx.lineTo(x2 * scale,y2 * scale);
+	//tension //'rgba(135,206,250,0.7)'
+	if (color == 1) {
+		ctx.strokeStyle = 'rgba(230,230,0,0.6)'
+	}
+	//compression //'rgba(230,230,0,0.7)'
+	else if (color == 2) {
+		ctx.strokeStyle = 'rgba(255, 80, 80,0.6)'
+	}
+	//no force memeber //'rgba(0,153,0,0.5)'
+	else if (color == 3) {
+		ctx.strokeStyle = 'rgba(135,206,250,0.7)'
+	}
+
+	ctx.lineWidth=4;
+	ctx.stroke();
+
+	ctx.closePath();
+}
+
+function drawLine(x1,y1,x2,y2) {
+	var ctx = getCanvas();
+
+	ctx.beginPath();
+	ctx.moveTo(x1 * scale,y1 * scale);
+	ctx.lineTo(x2 * scale,y2 * scale);
+	ctx.stroke();
+}
+
+function drawArrowLarge(x,y,x_tip,y_tip) {
+	var ctx = getCanvas();
+
+	var theta = Math.atan((y_tip - y) / (x_tip - x));
+	if (x_tip - x < 0) {
+    theta = theta + Math.PI;
+} else { 
+    theta = theta;
+}
+	ctx.beginPath();
+	ctx.moveTo(x * scale, y * scale);
+	ctx.lineTo(x_tip * scale, y_tip * scale);
+	ctx.lineTo(scale*x_tip - scale*0.3 * Math.sin(0.25 * Math.PI - theta), scale*y_tip - scale*0.3 * Math.cos(0.25 * Math.PI - theta));
+	ctx.moveTo(x_tip * scale, y_tip * scale);
+	ctx.lineTo(scale*x_tip - scale*0.3 * Math.cos(0.25 * Math.PI - theta), scale*y_tip + scale*0.3 * Math.sin(0.25 * Math.PI - theta));
+	ctx.stroke();
+}
+
+function drawArrowSmall(x,y,x_tip,y_tip,color) {
+	var ctx = getCanvas();
+
+	// var gr = ctx.createLinearGradient(x,y,x_tip,y_tip);
+	// gr.addColorStop(0,color);
+	// gr.addColorStop(1,color);
+	//ctx.strokeStyle = gr
+
+	ctx.strokeStyle = color;
+
+	var theta = Math.atan((y_tip - y) / (x_tip - x));
+		if (x_tip - x < 0) {
+	    theta = theta + Math.PI;
+	} else { 
+	    theta = theta;
+	}
+	ctx.beginPath();
+	ctx.moveTo(x * scale, y * scale);
+	ctx.lineTo(x_tip * scale, y_tip * scale);
+	ctx.lineTo(scale*x_tip - scale*0.15 * Math.sin(Math.PI/3 - theta), scale*y_tip - scale*0.15 * Math.cos(Math.PI/3 - theta));
+	ctx.moveTo(x_tip * scale, y_tip * scale);
+	ctx.lineTo(scale*x_tip - scale*0.15 * Math.cos(Math.PI/6 - theta), scale*y_tip + scale*0.15 * Math.sin(Math.PI/6 - theta));
+	ctx.closePath();
+
+		ctx.lineWidth=2;
+	ctx.stroke();
+}
+
+function drawBall(x1,y1,r) {
+	var ctx = getCanvas();
+
+	ctx.beginPath();
+	ctx.arc(x1 * scale,y1 * scale,r * scale,0,2*Math.PI);
+	ctx.stroke();
+}
+
+function drawCenterofmass(x1, y1, r) {
+	var ctx = getCanvas();
+
+	//bottom right
+	ctx.fillStyle = 'black'
+	ctx.beginPath();
+	ctx.moveTo(x1*scale, y1*scale + r*scale);
+	ctx.lineTo(x1*scale, y1*scale);
+	ctx.lineTo(x1*scale + r*scale, y1*scale);
+	ctx.arc(x1*scale, y1*scale, r*scale, 0, Math.PI/2);
+	ctx.closePath();
+	ctx.fill();
+	ctx.stroke();
+
+	//bottom left
+	ctx.fillStyle = 'white'
+	ctx.beginPath();
+	ctx.moveTo(x1*scale - r*scale, y1*scale);
+	ctx.lineTo(x1*scale, y1*scale);
+	ctx.lineTo(x1*scale, y1*scale + r*scale);
+	ctx.arc(x1*scale, y1*scale, r*scale, Math.PI/2, Math.PI);
+	ctx.closePath();
+	ctx.fill();
+	ctx.stroke();
+
+	//top left
+	ctx.fillStyle = 'black'
+	ctx.beginPath();
+	ctx.moveTo(x1*scale, y1*scale - r*scale);
+	ctx.lineTo(x1*scale, y1*scale);
+	ctx.lineTo(x1*scale - r*scale, y1*scale);
+	ctx.arc(x1*scale, y1*scale, r*scale, Math.PI, 3*Math.PI/2);
+	ctx.closePath();
+	ctx.fill();
+
+	ctx.stroke();
+
+	//top right
+	ctx.fillStyle = 'white'
+	ctx.beginPath();
+	ctx.moveTo(x1*scale + r*scale, y1*scale);
+	ctx.lineTo(x1*scale, y1*scale);
+	ctx.lineTo(x1*scale, y1*scale - r*scale);
+	ctx.arc(x1*scale, y1*scale, r*scale, 3*Math.PI/2, 2*Math.PI);
+	ctx.closePath();
+	ctx.fill();
+
+	ctx.stroke();
+}
+}
+
+  </script>
+</body>
+</html>
